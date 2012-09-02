@@ -37,7 +37,7 @@ public class QQWryRecord {
 				break;
 			}
 		} catch (Exception e) {
-			// TODO: handle exception
+			e.printStackTrace();
 		}
 		return area;
 	}

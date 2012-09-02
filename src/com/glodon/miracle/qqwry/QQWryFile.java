@@ -8,7 +8,6 @@ import java.util.List;
 
 import com.glodon.miracle.storage.MongoDB;
 import com.mongodb.BasicDBObject;
-import com.mongodb.DBCollection;
 import com.mongodb.DBObject;
 
 public class QQWryFile {
@@ -71,35 +70,57 @@ public class QQWryFile {
 		}
 		// 找不到精确的，取一个最相近的
 		middleIndex = new QQWryIndex(ipFile, first + right * IP_RECORD_LENGTH);
+		System.out.println(new QQWryRecord(ipFile, middleIndex.getIpPos()).getIp());
 		return new QQWryRecord(ipFile, middleIndex.getIpPos());
 	}
 
-	public void storageToMongoDBByBatch(RandomAccessFile ipFile,
-			QQWryRecord[] records) {
-		MongoDB mongo = new MongoDB();
-		DBCollection coll = mongo.getColl();
-		List<DBObject> batchPush = new ArrayList<DBObject>();
-
-		for (int i = 0; i < records.length; i++) {
-			DBObject doc = new BasicDBObject();
-			doc.put("ip", records[i].getIp());
-			doc.put("loc", records[i].getCountry());
-			doc.put("isp", records[i].getArea());
+	public void storageToMongoDB(RandomAccessFile ipFile, int batch) {
+		MongoDB mongo = MongoDB.getInstance();
+		List<DBObject> batchPush = new ArrayList<DBObject>(batch);
+		QQWryHeader header = new QQWryHeader(ipFile);
+		QQWryIndex index = null;
+		QQWryRecord record = null;
+		DBObject doc = null;
+		int count = 0;
+		long pos = header.getIpBegin();
+		while (pos <= header.getIpEnd()) {
+			index = new QQWryIndex(ipFile, pos);
+			record = new QQWryRecord(ipFile, index.getIpPos());
+			
+			doc = new BasicDBObject();
+			doc.put("ip", Utils.ipToStr(record.getIp()));
+			doc.put("loc", record.getCountry());
+			doc.put("isp", record.getArea());
 			batchPush.add(doc);
 			doc = null;
+			
+			if (count < batch)
+				count++;
+			else {
+				MongoDB.insertToMongoDBByBatch(mongo, batchPush);
+				batchPush.clear();
+				count = 0;
+			}
+			
+			pos += IP_RECORD_LENGTH;
 		}
-		
-		coll.insert(batchPush);
+		mongo.close(mongo);
+		batchPush = null;
+		record = null;
+		index = null;
+		header = null;
 	}
 
 	public static void main(String[] args) {
 		String ip = "202.108.22.5";
 
-		QQWryFile qqWryFile = new QQWryFile();
+		QQWryFile qqWryFile = QQWryFile.getInstance();
 		RandomAccessFile ipFile = qqWryFile.getIpFile();
 		QQWryRecord record = qqWryFile.find(ip, ipFile);
 		System.out.println(record.getCountry());
 		System.out.println(record.getArea());
+		System.out.println(Utils.ipToStr(3396081663L));
+//		qqWryFile.storageToMongoDB(ipFile, 100);
 		qqWryFile.closeIpFile(ipFile);
 		qqWryFile = null;
 	}

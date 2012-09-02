@@ -23,6 +23,7 @@ public class QQWryIndex {
 			try {
 				ipFile.close();
 			} catch (IOException e) {
+				e.printStackTrace();
 				ipFile = null;
 			}
 			System.exit(1);
