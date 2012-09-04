@@ -75,7 +75,7 @@ public class QQWryFile {
 	}
 
 	public void storageToMongoDB(RandomAccessFile ipFile, int batch) {
-		MongoDB mongo = MongoDB.getInstance();
+//		MongoDB mongo = MongoDB.getInstance();
 		List<DBObject> batchPush = new ArrayList<DBObject>(batch);
 		QQWryHeader header = new QQWryHeader(ipFile);
 		QQWryIndex index = null;
@@ -97,14 +97,14 @@ public class QQWryFile {
 			if (count < batch)
 				count++;
 			else {
-				MongoDB.insertToMongoDBByBatch(mongo, batchPush);
+//				MongoDB.insertToMongoDBByBatch(mongo, batchPush);
 				batchPush.clear();
 				count = 0;
 			}
 			
 			pos += IP_RECORD_LENGTH;
 		}
-		mongo.close(mongo);
+//		mongo.close(mongo);
 		batchPush = null;
 		record = null;
 		index = null;
@@ -120,7 +120,7 @@ public class QQWryFile {
 		System.out.println(record.getCountry());
 		System.out.println(record.getArea());
 		System.out.println(Utils.ipToStr(3396081663L));
-//		qqWryFile.storageToMongoDB(ipFile, 100);
+		qqWryFile.storageToMongoDB(ipFile, 100);
 		qqWryFile.closeIpFile(ipFile);
 		qqWryFile = null;
 	}
