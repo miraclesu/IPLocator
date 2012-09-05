@@ -66,12 +66,16 @@ public class QQWryFile {
 			else if (ipValue < middleIndex.getStartIp())
 				right = middle - 1;
 			else
-				return new QQWryRecord(ipFile, middleIndex.getIpPos());
+				return new QQWryRecord(ipFile, middleIndex.getStartIp(), middleIndex.getIpPos());
 		}
-		// 找不到精确的，取一个最相近的
+		// 找不到精确的，取在范围内的
 		middleIndex = new QQWryIndex(ipFile, first + right * IP_RECORD_LENGTH);
-		System.out.println(new QQWryRecord(ipFile, middleIndex.getIpPos()).getIp());
-		return new QQWryRecord(ipFile, middleIndex.getIpPos());
+		QQWryRecord record = new QQWryRecord(ipFile, middleIndex.getStartIp(), middleIndex.getIpPos());
+		if (ipValue >= record.getStartIP() && ipValue <= record.getEndIP()) {
+			return record;
+		} else {
+			return new QQWryRecord(-1L, ipValue);
+		}
 	}
 
 	public void storageToMongoDB(RandomAccessFile ipFile, int batch) {
@@ -85,10 +89,10 @@ public class QQWryFile {
 		long pos = header.getIpBegin();
 		while (pos <= header.getIpEnd()) {
 			index = new QQWryIndex(ipFile, pos);
-			record = new QQWryRecord(ipFile, index.getIpPos());
+			record = new QQWryRecord(ipFile, 0L, index.getIpPos());
 			
 			doc = new BasicDBObject();
-			doc.put("ip", Utils.ipToStr(record.getIp()));
+			doc.put("ip", Utils.ipToStr(record.getEndIP()));
 			doc.put("loc", record.getCountry());
 			doc.put("isp", record.getArea());
 			batchPush.add(doc);
@@ -113,14 +117,17 @@ public class QQWryFile {
 
 	public static void main(String[] args) {
 		String ip = "202.108.22.5";
+//		ip = "202.108.9.155";
 
 		QQWryFile qqWryFile = QQWryFile.getInstance();
 		RandomAccessFile ipFile = qqWryFile.getIpFile();
 		QQWryRecord record = qqWryFile.find(ip, ipFile);
+		System.out.println(Utils.ipToStr(record.getStartIP()));
+		System.out.println(Utils.ipToStr(record.getEndIP()));
 		System.out.println(record.getCountry());
 		System.out.println(record.getArea());
-		System.out.println(Utils.ipToStr(3396081663L));
-		qqWryFile.storageToMongoDB(ipFile, 100);
+//		System.out.println(Utils.ipToStr(3396081663L));
+//		qqWryFile.storageToMongoDB(ipFile, 100);
 		qqWryFile.closeIpFile(ipFile);
 		qqWryFile = null;
 	}

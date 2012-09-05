@@ -4,15 +4,19 @@ import java.io.IOException;
 import java.io.RandomAccessFile;
 
 public class QQWryRecord {
-	private long ip = 0L;
+	private long startIP = 0L;
+	private long endIP = 0L;
 	private String country = null;
 	private String area = null;
 	
 	private static final byte AREA_FOLLOWED = 0x01;
 	private static final byte NO_AREA = 0x2;
 	
-	public long getIp() {
-		return ip;
+	public long getStartIP() {
+		return startIP;
+	}
+	public long getEndIP() {
+		return endIP;
 	}
 	public String getCountry() {
 		return country;
@@ -42,8 +46,14 @@ public class QQWryRecord {
 		return area;
 	}
 	
-	public QQWryRecord(RandomAccessFile ipFile, long pos) {
-		ip = QQWryIO.readLong4(ipFile, pos);
+	public QQWryRecord(long startIP, long endIP) {
+		this.startIP = startIP;
+		this.endIP = endIP;
+	}
+	
+	public QQWryRecord(RandomAccessFile ipFile, long startIP, long pos) {
+		this.startIP = startIP;
+		endIP = QQWryIO.readLong4(ipFile, pos);
 		try {
 			ipFile.seek(pos + 4);
 			switch (ipFile.readByte()) {
