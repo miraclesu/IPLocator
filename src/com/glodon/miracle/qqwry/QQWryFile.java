@@ -71,15 +71,16 @@ public class QQWryFile {
 		// 找不到精确的，取在范围内的
 		middleIndex = new QQWryIndex(ipFile, first + right * IP_RECORD_LENGTH);
 		QQWryRecord record = new QQWryRecord(ipFile, middleIndex.getStartIp(), middleIndex.getIpPos());
-		if (ipValue >= record.getStartIP() && ipValue <= record.getEndIP()) {
+		if (ipValue >= record.getBeginIP() && ipValue <= record.getEndIP()) {
 			return record;
 		} else {
-			return new QQWryRecord(-1L, ipValue);
+			//找不到相应的记录
+			return new QQWryRecord(0L, ipValue);
 		}
 	}
 
 	public void storageToMongoDB(RandomAccessFile ipFile, int batch) {
-//		MongoDB mongo = MongoDB.getInstance();
+		MongoDB mongo = MongoDB.getInstance();
 		List<DBObject> batchPush = new ArrayList<DBObject>(batch);
 		QQWryHeader header = new QQWryHeader(ipFile);
 		QQWryIndex index = null;
@@ -92,7 +93,8 @@ public class QQWryFile {
 			record = new QQWryRecord(ipFile, 0L, index.getIpPos());
 			
 			doc = new BasicDBObject();
-			doc.put("ip", Utils.ipToStr(record.getEndIP()));
+			doc.put("ip_start", Utils.ipToStr(record.getBeginIP()));
+			doc.put("ip_end", Utils.ipToStr(record.getEndIP()));
 			doc.put("loc", record.getCountry());
 			doc.put("isp", record.getArea());
 			batchPush.add(doc);
@@ -101,14 +103,14 @@ public class QQWryFile {
 			if (count < batch)
 				count++;
 			else {
-//				MongoDB.insertToMongoDBByBatch(mongo, batchPush);
+				MongoDB.insertToMongoDBByBatch(mongo, batchPush);
 				batchPush.clear();
 				count = 0;
 			}
 			
 			pos += IP_RECORD_LENGTH;
 		}
-//		mongo.close(mongo);
+		mongo.close(mongo);
 		batchPush = null;
 		record = null;
 		index = null;
@@ -122,7 +124,7 @@ public class QQWryFile {
 		QQWryFile qqWryFile = QQWryFile.getInstance();
 		RandomAccessFile ipFile = qqWryFile.getIpFile();
 		QQWryRecord record = qqWryFile.find(ip, ipFile);
-		System.out.println(Utils.ipToStr(record.getStartIP()));
+		System.out.println(Utils.ipToStr(record.getBeginIP()));
 		System.out.println(Utils.ipToStr(record.getEndIP()));
 		System.out.println(record.getCountry());
 		System.out.println(record.getArea());
