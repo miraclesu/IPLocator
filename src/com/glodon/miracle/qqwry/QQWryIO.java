@@ -31,27 +31,17 @@ public class QQWryIO {
 	
 	public static String readString(RandomAccessFile ipFile, long pos) {
 		try {
-			byte[] b = new byte[128];
+			//获取字符串的长度
 			ipFile.seek(pos);
-			int i = 0;
-			for (b[i] = ipFile.readByte(); b[i] != 0 ; b[++i] = ipFile.readByte());
+			int i = 1;
+			for(; 0 != ipFile.readByte(); i++);
+			
+			byte[] b = new byte[i];
+			ipFile.seek(pos);
+			ipFile.read(b, 0, i);
 			return Utils.encode(b, "GBK");
-		} catch (ArrayIndexOutOfBoundsException e) {
-			try {
-				//获取字符串的长度
-				ipFile.seek(pos);
-				int i = 1;
-				for(; 0 != ipFile.readByte(); i++);
-				
-				byte[] b = new byte[i];
-				ipFile.seek(pos);
-				for (i = 0, b[i] = ipFile.readByte(); b[i] != 0 ; b[++i] = ipFile.readByte());
-				return Utils.encode(b, "GBK");
-			} catch (IOException e1) {
-				e1.printStackTrace();
-			}
-		} catch (Exception e1) {
-			e1.printStackTrace();
+		} catch (Exception e) {
+			e.printStackTrace();
 		}
 		return null;
 	}

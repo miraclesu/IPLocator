@@ -1,6 +1,5 @@
 package com.glodon.miracle.qqwry;
 
-import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.RandomAccessFile;
 import java.util.ArrayList;
@@ -11,7 +10,7 @@ import com.mongodb.BasicDBObject;
 import com.mongodb.DBObject;
 
 public class QQWryFile {
-	private final static String IP_FILE = "./qqwry.dat";
+	private final static String IP_FILE = getQQWryFilePath();
 	private static final int IP_RECORD_LENGTH = 7;
 	private RandomAccessFile ipFile = null;
 
@@ -20,12 +19,24 @@ public class QQWryFile {
 	}
 
 	private static QQWryFile instance = null;
+	
+	public static String getQQWryFilePath() {
+		try {
+			return QQWryFile.class.getClassLoader().getResource("qqwry.dat").getPath();
+		} catch (Exception e) {
+			System.out.println("没有找到qqwry.dat文件");
+			e.printStackTrace();
+			return null;
+		}
+	}
 
 	public QQWryFile() {
 		try {
+			if(null == IP_FILE)
+				System.exit(1);
 			ipFile = new RandomAccessFile(IP_FILE, "r");
-		} catch (FileNotFoundException e) {
-			System.out.println(IP_FILE + "文件没有找到");
+		} catch (IOException e) {
+			System.out.println("无法打开" + IP_FILE + "文件");
 		}
 	}
 
@@ -128,6 +139,8 @@ public class QQWryFile {
 		System.out.println(Utils.ipToStr(record.getEndIP()));
 		System.out.println(record.getCountry());
 		System.out.println(record.getArea());
+//		String path = QQWryFile.class.getClass().getResource("/qqwry.dat").getPath();
+//		System.out.println(path);
 //		System.out.println(Utils.ipToStr(3396081663L));
 //		qqWryFile.storageToMongoDB(ipFile, 100);
 		qqWryFile.closeIpFile(ipFile);
