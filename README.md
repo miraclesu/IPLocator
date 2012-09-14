@@ -2,7 +2,10 @@
 
 ## 使用：
 
-1. 直接调用（推荐，效率最高）：
+__1. 直接调用（推荐，效率最高）：__
+
+<!-- language: lang-java -->
+	
 	String ip = "202.108.22.5";
 	QQWryFile qqWryFile = QQWryFile.getInstance();
 	RandomAccessFile ipFile = qqWryFile.getIpFile();
@@ -11,23 +14,23 @@
 	System.out.println(Utils.ipToStr(record.getEndIP()));
 	System.out.println(record.getCountry());
 	System.out.println(record.getArea());
-	
-结果：
-	202.108.22.0
-	202.108.23.255
-	北京市
-	百度公司
 
-2. PostgreSQL:
-	1. 在pg数据库里新建数据名为 *ipsdb* 的数据库（如需其他名字，在PostgreSQL.java文件内改相应的配置） 
-	2. 调QQWryFile里的storageToPg方法，把ip库存进pg数据里
-	3. 查询：select * from ips where ip_start <= inet '202.108.22.5' and ip_end >= inet '202.108.22.5';
+__结果：__  <br/>
+> 202.108.22.0 <br/>
+202.108.23.255 <br/>
+北京市 <br/>
+百度公司 <br/>
 
-3. mongodb:
-	1. 在pg数据库里新建数据名为 *ipsdb* 的数据库（如需其他名字，在PostgreSQL.java文件内改相应的配置） 
-	2. 调QQWryFile里的storageToMongDB方法，把ip库存进mongo数据里
-	3. 先把ip按Utils文件里的ipToLong变成长整型，然后再去查：
-	db.ips.find({ip_start : {$lte : NumberLong(3396077979)}, ip_end : {$gte : NumberLong(3396077979)}})
+__2.  PostgreSQL:__ <br/>
+> 1. 在pg数据库里新建数据名为 *ipsdb* 的数据库（如需其他名字，在PostgreSQL.java文件内改相应的配置）<br/>
+2. 调QQWryFile里的storageToPg方法，把ip库存进pg数据里<br/>
+3. 查询：`select * from ips where ip_start <= inet '202.108.22.5' and ip_end >= inet '202.108.22.5';`<br/>
+
+__3. mongodb:__ 
+> 1. 在pg数据库里新建数据名为 *ipsdb* 的数据库（如需其他名字，在PostgreSQL.java文件内改相应的配置） <br/>
+2. 调QQWryFile里的storageToMongDB方法，把ip库存进mongo数据里<br/>
+3. 先把ip按Utils文件里的ipToLong变成长整型，然后再去查：<br/>
+`db.ips.find({ip_start : {$lte : NumberLong(3396077979)}, ip_end : {$gte : NumberLong(3396077979)}})`<br/>
 	
 ## 参考资料：
 
