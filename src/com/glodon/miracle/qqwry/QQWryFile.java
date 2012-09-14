@@ -2,10 +2,14 @@ package com.glodon.miracle.qqwry;
 
 import java.io.IOException;
 import java.io.RandomAccessFile;
+import java.sql.Connection;
+import java.sql.PreparedStatement;
+import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.List;
 
 import com.glodon.miracle.storage.MongoDB;
+import com.glodon.miracle.storage.PostgreSQL;
 import com.mongodb.BasicDBObject;
 import com.mongodb.DBObject;
 
@@ -19,10 +23,11 @@ public class QQWryFile {
 	}
 
 	private static QQWryFile instance = null;
-	
+
 	public static String getQQWryFilePath() {
 		try {
-			return QQWryFile.class.getClassLoader().getResource("qqwry.dat").getPath();
+			return QQWryFile.class.getClassLoader().getResource("qqwry.dat")
+					.getPath();
 		} catch (Exception e) {
 			System.out.println("没有找到qqwry.dat文件");
 			e.printStackTrace();
@@ -32,7 +37,7 @@ public class QQWryFile {
 
 	public QQWryFile() {
 		try {
-			if(null == IP_FILE)
+			if (null == IP_FILE)
 				System.exit(1);
 			ipFile = new RandomAccessFile(IP_FILE, "r");
 		} catch (IOException e) {
@@ -77,15 +82,17 @@ public class QQWryFile {
 			else if (ipValue < middleIndex.getStartIp())
 				right = middle - 1;
 			else
-				return new QQWryRecord(ipFile, middleIndex.getStartIp(), middleIndex.getIpPos());
+				return new QQWryRecord(ipFile, middleIndex.getStartIp(),
+						middleIndex.getIpPos());
 		}
 		// 找不到精确的，取在范围内的
 		middleIndex = new QQWryIndex(ipFile, first + right * IP_RECORD_LENGTH);
-		QQWryRecord record = new QQWryRecord(ipFile, middleIndex.getStartIp(), middleIndex.getIpPos());
+		QQWryRecord record = new QQWryRecord(ipFile, middleIndex.getStartIp(),
+				middleIndex.getIpPos());
 		if (ipValue >= record.getBeginIP() && ipValue <= record.getEndIP()) {
 			return record;
 		} else {
-			//找不到相应的记录
+			// 找不到相应的记录
 			return new QQWryRecord(0L, ipValue);
 		}
 	}
@@ -101,16 +108,17 @@ public class QQWryFile {
 		long pos = header.getIpBegin();
 		while (pos <= header.getIpEnd()) {
 			index = new QQWryIndex(ipFile, pos);
-			record = new QQWryRecord(ipFile, 0L, index.getIpPos());
-			
+			record = new QQWryRecord(ipFile, index.getStartIp(),
+					index.getIpPos());
+
 			doc = new BasicDBObject();
-			doc.put("ip_start", Utils.ipToStr(record.getBeginIP()));
-			doc.put("ip_end", Utils.ipToStr(record.getEndIP()));
+			doc.put("ip_start", record.getBeginIP());
+			doc.put("ip_end", record.getEndIP());
 			doc.put("loc", record.getCountry());
 			doc.put("isp", record.getArea());
 			batchPush.add(doc);
 			doc = null;
-			
+
 			if (count < batch)
 				count++;
 			else {
@@ -118,31 +126,96 @@ public class QQWryFile {
 				batchPush.clear();
 				count = 0;
 			}
-			
+
 			pos += IP_RECORD_LENGTH;
 		}
-		mongo.close(mongo);
+
 		batchPush = null;
 		record = null;
 		index = null;
 		header = null;
+		mongo.close(mongo);
 	}
 
-	public static void main(String[] args) {
+	public void storageToPg(RandomAccessFile ipFile, int batch) {
+		QQWryHeader header = new QQWryHeader(ipFile);
+		QQWryIndex index = null;
+		QQWryRecord record = null;
+		PostgreSQL pg = PostgreSQL.getInstance();
+		Connection conn = null;
+		PreparedStatement pst = null;
+		String tableName = "ips";
+		String sql = "insert into "
+				+ tableName
+				+ " (ip_start, ip_end, country, area) values(cast(? as inet), cast(? as inet), ?, ?)";
+		try {
+			conn = pg.getConnection();
+			if (!pg.isExistTalbe(conn, tableName))
+				pg.createTable(conn, tableName);
+			conn.setAutoCommit(false);
+			pst = conn.prepareStatement(sql);
+
+			int count = 0;
+			long pos = header.getIpBegin();
+			while (pos <= header.getIpEnd()) {
+				index = new QQWryIndex(ipFile, pos);
+				record = new QQWryRecord(ipFile, index.getStartIp(),
+						index.getIpPos());
+
+				pst.setString(1, Utils.ipToStr(record.getBeginIP()));
+				pst.setString(2, Utils.ipToStr(record.getEndIP()));
+				pst.setString(3, record.getCountry());
+				pst.setString(4, record.getArea());
+				pst.addBatch();
+
+				if (count < batch)
+					count++;
+				else {
+					pst.executeBatch();
+					conn.commit();
+					pst.clearBatch();
+					pst.clearParameters();
+					count = 0;
+				}
+
+				pos += IP_RECORD_LENGTH;
+			}
+
+		} catch (Exception e) {
+			e.printStackTrace();
+		} finally {
+			try {
+				conn.setAutoCommit(true);
+				if (pst != null) {
+					pst.close();
+				}
+				if (conn != null) {
+					conn.close();
+				}
+			} catch (Exception ex) {
+				ex.printStackTrace();
+			}
+		}
+	}
+
+	public static void main(String[] args) throws SQLException {
 		String ip = "202.108.22.5";
-//		ip = "202.108.9.155";
+		// ip = "202.108.9.155";
 
 		QQWryFile qqWryFile = QQWryFile.getInstance();
 		RandomAccessFile ipFile = qqWryFile.getIpFile();
 		QQWryRecord record = qqWryFile.find(ip, ipFile);
+
 		System.out.println(Utils.ipToStr(record.getBeginIP()));
 		System.out.println(Utils.ipToStr(record.getEndIP()));
 		System.out.println(record.getCountry());
 		System.out.println(record.getArea());
-//		String path = QQWryFile.class.getClass().getResource("/qqwry.dat").getPath();
-//		System.out.println(path);
-//		System.out.println(Utils.ipToStr(3396081663L));
-//		qqWryFile.storageToMongoDB(ipFile, 100);
+
+		// System.out.println(Utils.ipToStr(16842751));
+		// System.out.println(Utils.ipToLong(ip));
+		// qqWryFile.storageToPg(ipFile, 100);
+		// qqWryFile.storageToMongoDB(ipFile, 100);
+		
 		qqWryFile.closeIpFile(ipFile);
 		qqWryFile = null;
 	}

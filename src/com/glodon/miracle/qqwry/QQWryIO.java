@@ -10,6 +10,7 @@ public class QQWryIO {
 			byte[] b = new byte[4];
 			ipFile.seek(pos);
 			ipFile.read(b, 0, 4);
+			//IP库文件里存的是小尾端
 			return (b[0] & 0xFFL) | ((b[1] << 8) & 0xFF00L) | ((b[2] << 16) & 0xFF0000L) | ((b[3] << 24) & 0xFF000000L);
 		} catch (IOException e) {
 			e.printStackTrace();
@@ -38,8 +39,9 @@ public class QQWryIO {
 			
 			byte[] b = new byte[i];
 			ipFile.seek(pos);
+			//若想转换成utf8编码，需考虑\0结尾符
 			ipFile.read(b, 0, i);
-			return Utils.encode(b, "GBK");
+			return Utils.encode(b, "GBK").trim();
 		} catch (Exception e) {
 			e.printStackTrace();
 		}
